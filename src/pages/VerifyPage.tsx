@@ -177,25 +177,31 @@ export default function VerifyPage() {
           <div>
             <div className="text-center mb-8">{statusBadge}</div>
 
-            {/* Details card */}
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden mb-8">
-              <div className="px-6 py-4 border-b border-neutral-800 flex items-center gap-2">
-                <BadgeCheck className="w-4 h-4 text-amber-200" />
-                <h2 className="text-sm font-medium tracking-[0.2em] uppercase text-neutral-300">
-                  Certificate Details
-                </h2>
+            {state.data.recipient_name ? (
+              <div className="bg-neutral-900 border border-neutral-800 rounded-2xl overflow-hidden mb-8">
+                <div className="px-6 py-4 border-b border-neutral-800 flex items-center gap-2">
+                  <BadgeCheck className="w-4 h-4 text-amber-200" />
+                  <h2 className="text-sm font-medium tracking-[0.2em] uppercase text-neutral-300">
+                    Certificate Details
+                  </h2>
+                </div>
+                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
+                  <Detail label="Recipient Full Name" value={state.data.recipient_name} />
+                  <Detail label="Certificate ID" value={state.data.certificate_id} mono />
+                  <Detail label="Course Name" value={state.data.course_name} />
+                  <Detail label="Organization" value={state.data.organization_name} />
+                  <Detail label="Course Start Date" value={formatDate(state.data.start_date)} />
+                  <Detail label="Completion Date" value={formatDate(state.data.completion_date)} />
+                  <Detail label="Issue Date" value={formatDate(state.data.issue_date)} />
+                  <Detail label="Director Name" value={state.data.director_name} />
+                </dl>
               </div>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8">
-                <Detail label="Recipient Full Name" value={state.data.recipient_name} />
-                <Detail label="Certificate ID" value={state.data.certificate_id} mono />
-                <Detail label="Course Name" value={state.data.course_name} />
-                <Detail label="Organization" value={state.data.organization_name} />
-                <Detail label="Course Start Date" value={formatDate(state.data.start_date)} />
-                <Detail label="Completion Date" value={formatDate(state.data.completion_date)} />
-                <Detail label="Issue Date" value={formatDate(state.data.issue_date)} />
-                <Detail label="Director Name" value={state.data.director_name} />
-              </dl>
-            </div>
+            ) : (
+              <div className="mb-8 rounded-2xl border border-red-800/60 bg-red-950/30 px-6 py-8 text-center">
+                <h1 className="text-xl font-semibold tracking-wide text-red-300">INVALID CERTIFICATE</h1>
+                <p className="mt-2 font-mono text-sm text-neutral-400">{state.data.certificate_id}</p>
+              </div>
+            )}
 
             {actionError && (
               <p className="text-sm text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2 mb-4 text-center">

@@ -60,13 +60,9 @@ export default function RecordsPage() {
     setError(null);
     setSuccess(null);
     try {
-      const { data, error: deleteError } = await supabase
-        .from('certificates')
-        .delete()
-        .eq('id', certificate.id)
-        .eq('user_id', user.id)
-        .select('id')
-        .maybeSingle();
+      const { data, error: deleteError } = await supabase.rpc('delete_certificate', {
+        p_certificate_id: certificate.certificate_id,
+      });
 
       if (deleteError) throw new Error(deleteError.message);
       if (!data) throw new Error('The certificate may already have been removed.');

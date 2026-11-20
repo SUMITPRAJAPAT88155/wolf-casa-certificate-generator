@@ -92,7 +92,7 @@ input[type='date']::-webkit-calendar-picker-indicator {
   top: 163px;
   transform: translateX(-50%);
   object-fit: contain;
-  opacity: .065;
+  opacity: .04;
   pointer-events: none;
 }
 
@@ -251,15 +251,13 @@ input[type='date']::-webkit-calendar-picker-indicator {
 
 .certificate-title-block h1 {
   margin: 0;
-  background: linear-gradient(180deg, #fff4d5, #d9b866 55%, #a8843e);
-  background-clip: text;
-  color: transparent;
+  color: #e4ce91;
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 49px;
   font-weight: 600;
   letter-spacing: .23em;
   line-height: 1;
-  -webkit-background-clip: text;
+  text-shadow: 0 1px 5px rgba(212, 180, 105, .18);
 }
 
 .certificate-title-block p {
@@ -313,7 +311,7 @@ input[type='date']::-webkit-calendar-picker-indicator {
   margin-bottom: 0;
   color: #fffaf0;
   font-family: 'Cormorant Garamond', Georgia, serif;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: .085em;
   line-height: 1.08;
   white-space: nowrap;
@@ -526,8 +524,8 @@ input[type='date']::-webkit-calendar-picker-indicator {
 
 .certificate-qr-frame canvas {
   display: block;
-  width: 62px;
-  height: 62px;
+  width: 96px;
+  height: 96px;
 }
 
 @page {

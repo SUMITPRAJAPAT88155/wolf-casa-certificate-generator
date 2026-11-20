@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, FileDown, Printer, Eye, Loader2, X, FolderOpen } from 'lucide-react';
+import { Search, FileDown, Printer, Eye, Loader2, X, FolderOpen, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import type { Certificate } from '@/lib/types';
 import { formatDate } from '@/lib/date';
 import { downloadCertificatePdf, printElement } from '@/lib/pdf';
@@ -12,6 +13,7 @@ const inputCls =
 
 export default function RecordsPage() {
   const { settings } = useSettings();
+  const { user } = useAuth();
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -19,8 +21,10 @@ export default function RecordsPage() {
   const [viewCert, setViewCert] = useState<Certificate | null>(null);
   const [autoAction, setAutoAction] = useState<'download' | 'print' | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [deleteCert, setDeleteCert] = useState<Certificate | null>(null);
   const modalContentRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const modalCertRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,6 +33,7 @@ export default function RecordsPage() {
 
   async function load() {
     setLoading(true);
+    setError(null);
     const { data, error: err } = await supabase
       .from('certificates')
       .select('*')
@@ -36,6 +41,46 @@ export default function RecordsPage() {
     if (err) setError(err.message);
     setCerts(data ?? []);
     setLoading(false);
+  }
+
+  async function handleDelete() {
+    if (!deleteCert || busyKey) return;
+    if (!user) {
+      setError('You must be signed in to delete certificates.');
+      return;
+    }
+    if (deleteCert.user_id !== user.id) {
+      setError('You can only delete certificates belonging to your account.');
+      setDeleteCert(null);
+      return;
+    }
+
+    const certificate = deleteCert;
+    setBusyKey(`del-${certificate.id}`);
+    setError(null);
+    setSuccess(null);
+    try {
+      const { data, error: deleteError } = await supabase
+        .from('certificates')
+        .delete()
+        .eq('id', certificate.id)
+        .eq('user_id', user.id)
+        .select('id')
+        .maybeSingle();
+
+      if (deleteError) throw new Error(deleteError.message);
+      if (!data) throw new Error('The certificate may already have been removed.');
+
+      setCerts((current) => current.filter((item) => item.id !== certificate.id));
+      setViewCert((current) => current?.id === certificate.id ? null : current);
+      setDeleteCert(null);
+      setSuccess(`Certificate ${certificate.certificate_id} deleted successfully.`);
+      window.dispatchEvent(new Event('certificates:changed'));
+    } catch (deleteError) {
+      setError(`Could not delete the certificate: ${deleteError instanceof Error ? deleteError.message : String(deleteError)}`);
+    } finally {
+      setBusyKey(null);
+    }
   }
 
   const courses = useMemo(
@@ -88,7 +133,6 @@ export default function RecordsPage() {
     setAutoAction(null);
     if (action === 'download') handleDownload(viewCert);
     else handlePrint(viewCert);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewCert, autoAction]);
 
   useEffect(() => {
@@ -145,6 +189,11 @@ export default function RecordsPage() {
       {error && (
         <p className="text-sm text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-3 py-2 mb-4">
           {error}
+        </p>
+      )}
+      {success && (
+        <p className="text-sm text-emerald-300 bg-emerald-950/40 border border-emerald-900/50 rounded-lg px-3 py-2 mb-4" role="status">
+          {success}
         </p>
       )}
 
@@ -212,6 +261,18 @@ export default function RecordsPage() {
                         >
                           <Printer className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={() => {
+                            setError(null);
+                            setDeleteCert(c);
+                          }}
+                          title="Delete certificate"
+                          aria-label={`Delete certificate ${c.certificate_id}`}
+                          className="p-2 rounded-lg text-neutral-400 hover:text-red-300 hover:bg-red-950/40 transition-colors"
+                          disabled={busyKey !== null || !user || c.user_id !== user.id}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -270,6 +331,61 @@ export default function RecordsPage() {
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {deleteCert && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          role="presentation"
+        >
+          <section
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-certificate-title"
+            aria-describedby="delete-certificate-description"
+            className="w-full max-w-md rounded-xl border border-neutral-700 bg-neutral-950 p-6 shadow-2xl"
+          >
+            <h2 id="delete-certificate-title" className="text-lg font-semibold text-white">
+              Delete certificate?
+            </h2>
+            <p id="delete-certificate-description" className="mt-2 text-sm text-neutral-400">
+              Are you sure you want to delete this certificate? This action cannot be undone.
+            </p>
+            <p className="mt-3 truncate font-mono text-xs text-neutral-500">
+              {deleteCert.certificate_id} · {deleteCert.recipient_name}
+            </p>
+            {error && (
+              <p className="mt-3 rounded-lg border border-red-900/50 bg-red-950/40 px-3 py-2 text-sm text-red-300" role="alert">
+                {error}
+              </p>
+            )}
+            {busyKey === `del-${deleteCert.id}` && (
+              <p className="mt-3 flex items-center gap-2 text-sm text-neutral-400" role="status">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Deleting certificate…
+              </p>
+            )}
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteCert(null)}
+                disabled={busyKey !== null}
+                className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-200 transition-colors hover:border-neutral-500 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={busyKey !== null || !user || deleteCert.user_id !== user.id}
+                className="inline-flex items-center gap-2 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
+              >
+                {busyKey === `del-${deleteCert.id}` && <Loader2 className="h-4 w-4 animate-spin" />}
+                Delete
+              </button>
+            </div>
+          </section>
         </div>
       )}
     </div>

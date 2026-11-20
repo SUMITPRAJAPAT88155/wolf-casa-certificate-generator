@@ -43,6 +43,9 @@ export default function DashboardPage() {
       setLoading(false);
     }
     load();
+
+    window.addEventListener('certificates:changed', load);
+    return () => window.removeEventListener('certificates:changed', load);
   }, []);
 
   const cards = [

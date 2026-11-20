@@ -11,11 +11,25 @@ function formatDisplay(value?: string | null): string {
   if (!value) return '';
   const date = new Date(value + (value.length === 10 ? 'T00:00:00' : ''));
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function formatCourseDates(startDate?: string | null, completionDate?: string | null): string {
+  const start = formatDisplay(startDate);
+  const completion = formatDisplay(completionDate);
+  if (start && completion) return `${start} – ${completion}`;
+  return start || completion || '—';
+}
+
+function formatCourseName(value: string): string {
+  return value
+    .trim()
+    .toLocaleLowerCase()
+    .replace(/(^|[\s-])(\p{L})/gu, (_match, separator: string, letter: string) => `${separator}${letter.toLocaleUpperCase()}`);
 }
 
 function fitFontSize(value: string, maximum: number, minimum: number, maxWidth: number): number {
-  const estimatedWidth = Math.max(value.length * 0.62, 1);
+  const estimatedWidth = Math.max(value.length * 0.72, 1);
   return Math.max(minimum, Math.min(maximum, maxWidth / estimatedWidth));
 }
 
@@ -49,8 +63,9 @@ interface CertificateViewProps {
 export function CertificateView({ data }: CertificateViewProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
-  const recipient = (data.recipientName || 'Recipient Name').toLocaleUpperCase();
-  const course = data.courseName || 'Course Name';
+  const recipientName = data.recipientName.trim();
+  const recipient = recipientName.toLocaleUpperCase();
+  const course = formatCourseName(data.courseName || 'Course Name');
 
   useLayoutEffect(() => {
     const frame = frameRef.current;
@@ -67,6 +82,7 @@ export function CertificateView({ data }: CertificateViewProps) {
       <div
         id="certificate-view"
         className="certificate-canvas"
+        data-recipient-name={recipientName}
         style={{ transform: `scale(${scale})` }}
       >
         <div className="certificate-background" />
@@ -104,7 +120,7 @@ export function CertificateView({ data }: CertificateViewProps) {
           <p className="certificate-intro">This is to certify that</p>
           <p
             className="certificate-recipient"
-            style={{ fontSize: fitFontSize(recipient, 46, 22, 860) }}
+            style={{ fontSize: fitFontSize(recipient, 46, 18, 860) }}
           >
             {recipient}
           </p>
@@ -119,7 +135,7 @@ export function CertificateView({ data }: CertificateViewProps) {
             conducted by <strong>{data.organizationName || 'WOLF CASA INDORE'}</strong>
           </p>
           <p className="certificate-dates">
-            from {formatDisplay(data.startDate) || '—'} to {formatDisplay(data.completionDate) || '—'}
+            {formatCourseDates(data.startDate, data.completionDate)}
           </p>
         </main>
 
@@ -151,7 +167,7 @@ export function CertificateView({ data }: CertificateViewProps) {
               <div className="certificate-qr-frame">
                 <QRCodeCanvas
                   value={data.certificateId ? buildVerificationUrl(data.certificateId) : ''}
-                  size={74}
+                  size={96}
                   level="H"
                   includeMargin
                 />

@@ -99,7 +99,8 @@ export default function CreateCertificatePage() {
     try {
       await downloadCertificatePdf(
         certRef.current,
-        `Certificate-${(recipientName || 'recipient').replace(/[^a-zA-Z0-9]+/g, '-')}${certificateId ? `-${certificateId}` : ''}`
+        `Certificate-${(recipientName || 'recipient').replace(/[^a-zA-Z0-9]+/g, '-')}${certificateId ? `-${certificateId}` : ''}`,
+        recipientName
       );
       setMessage({ type: 'success', text: 'PDF downloaded.' });
     } catch {
@@ -113,7 +114,7 @@ export default function CreateCertificatePage() {
     setBusy('print');
     setMessage(null);
     try {
-      await printElement(certRef.current);
+      await printElement(certRef.current, recipientName);
     } catch {
       setMessage({ type: 'error', text: 'Print failed. Please allow popups for this page.' });
     }

@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { QRCodeCanvas } from 'qrcode.react';
-import { WolfIcon } from '@/components/WolfLogo';
-import wolfCasaEmblem from '@/assets/wolf-casa-gold-emblem.png';
+import wolfWatermark from '../assets/wolf-watermark.png';
 import type { CertificateData } from '@/lib/types';
 import { buildVerificationUrl } from '@/lib/verification';
 
@@ -50,7 +49,7 @@ function CertificateSeal() {
   return (
     <div className="certificate-seal" aria-label="Wolf Casa official certificate seal">
       <div className="certificate-seal-ring">
-        <img className="certificate-seal-logo" src={wolfCasaEmblem} alt="WOLF CASA gold emblem" />
+        <img className="certificate-seal-logo" src={wolfWatermark} alt="" aria-hidden="true" />
       </div>
     </div>
   );
@@ -88,7 +87,7 @@ export function CertificateView({ data }: CertificateViewProps) {
       >
         <div className="certificate-background" />
         <div className="certificate-grain" />
-        <img className="certificate-watermark-wolf" src={wolfCasaEmblem} alt="" aria-hidden="true" />
+        <img className="certificate-watermark-wolf" src={wolfWatermark} alt="" aria-hidden="true" />
         <div className="certificate-watermark-text">WOLF CASA</div>
 
         <div className="certificate-border certificate-border-outer" />
@@ -99,11 +98,7 @@ export function CertificateView({ data }: CertificateViewProps) {
         <div className="certificate-corner certificate-corner-br" />
 
         <header className="certificate-header">
-          {data.logoUrl ? (
-            <img className="certificate-brand-image" src={data.logoUrl} alt="Wolf Casa logo" crossOrigin="anonymous" />
-          ) : (
-            <WolfIcon className="certificate-brand-mark" />
-          )}
+          <img className="certificate-brand-image" src={wolfWatermark} alt="" aria-hidden="true" />
           <div className="certificate-brand-name">WOLF CASA<sup>®</sup></div>
           <div className="certificate-brand-tagline">TRAINING <i /> CERTIFICATION</div>
         </header>

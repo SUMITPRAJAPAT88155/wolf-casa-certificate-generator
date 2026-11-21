@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react';
-import { Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle, FileDown, Package, X } from 'lucide-react';
+import { Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle, Package, X } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import type { BulkRow } from '@/lib/types';
 import { generateUniqueCertificateId } from '@/lib/certificateId';
 import { buildVerificationUrl } from '@/lib/verification';
-import { excelDateToISO, todayISO } from '@/lib/date';
+import { excelDateToISO } from '@/lib/date';
 import { downloadCertificatesZip } from '@/lib/pdf';
 import { useSettings } from '@/hooks/useSettings';
 import { CertificateView } from '@/components/CertificateView';
@@ -395,4 +395,3 @@ export default function BulkGeneratorPage() {
     </div>
   );
 }
-

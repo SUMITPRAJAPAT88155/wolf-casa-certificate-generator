@@ -41,20 +41,28 @@ export default function SettingsPage() {
   async function handleSave() {
     setBusy(true);
     setMessage(null);
-    const err = await save({
-      company_name: companyName.trim() || 'Wolf Casa',
-      director_name: directorName.trim(),
-      course_name: courseName.trim(),
-      default_issue_date: defaultIssueDate || null,
-      logo_url: logoUrl,
-      signature_url: signatureUrl,
-    });
-    setBusy(false);
-    setMessage(
-      err
-        ? { type: 'error', text: `Could not save settings: ${err}` }
-        : { type: 'success', text: 'Settings saved. New certificates will use these details.' }
-    );
+    try {
+      const err = await save({
+        company_name: companyName.trim() || 'Wolf Casa',
+        director_name: directorName.trim(),
+        course_name: courseName.trim(),
+        default_issue_date: defaultIssueDate || null,
+        logo_url: logoUrl,
+        signature_url: signatureUrl,
+      });
+      setMessage(
+        err
+          ? { type: 'error', text: `Could not save settings: ${err}` }
+          : { type: 'success', text: 'Settings saved. New certificates will use these details.' }
+      );
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: `Could not save settings: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleImage(file: File, kind: 'logo' | 'signature') {

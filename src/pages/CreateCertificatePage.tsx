@@ -103,7 +103,10 @@ export default function CreateCertificatePage() {
   }
 
   async function handleDownload() {
-    if (!certRef.current) return;
+    if (!certRef.current) {
+      setMessage({ type: 'error', text: 'Certificate preview is not ready. Please wait a moment and try again.' });
+      return;
+    }
     setBusy('download');
     setMessage(null);
     try {
@@ -113,10 +116,14 @@ export default function CreateCertificatePage() {
         recipientName
       );
       setMessage({ type: 'success', text: 'PDF downloaded.' });
-    } catch {
-      setMessage({ type: 'error', text: 'PDF download failed. Please try again.' });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: `PDF download failed: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    } finally {
+      setBusy(null);
     }
-    setBusy(null);
   }
 
   async function handlePrint() {

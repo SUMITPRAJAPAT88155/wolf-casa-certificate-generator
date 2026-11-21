@@ -146,11 +146,15 @@ export default function BulkGeneratorPage() {
         setProgress(`Preparing PDF ${done} of ${total}...`)
       );
       setMessage({ type: 'success', text: `ZIP with ${items.length} certificates downloaded.` });
-    } catch {
-      setMessage({ type: 'error', text: 'ZIP download failed. Please try again.' });
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: `ZIP download failed: ${error instanceof Error ? error.message : String(error)}`,
+      });
+    } finally {
+      setZipping(false);
+      setProgress(null);
     }
-    setZipping(false);
-    setProgress(null);
   }
 
   function exportRecordsExcel() {

@@ -97,7 +97,10 @@ export default function RecordsPage() {
   }, [certs, search, courseFilter]);
 
   async function handleDownload(c: Certificate) {
-    if (!modalCertRef.current) return;
+    if (!modalCertRef.current) {
+      setError('Certificate preview is not ready. Please reopen the certificate and try again.');
+      return;
+    }
     setBusyKey(`dl-${c.id}`);
     setError(null);
     try {
@@ -105,10 +108,11 @@ export default function RecordsPage() {
         modalCertRef.current,
         `Certificate-${c.recipient_name.replace(/[^a-zA-Z0-9]+/g, '-')}-${c.certificate_id}`
       );
-    } catch {
-      setError('PDF download failed. Please try again.');
+    } catch (error) {
+      setError(`PDF download failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setBusyKey(null);
     }
-    setBusyKey(null);
   }
 
   async function handlePrint(c: Certificate) {

@@ -92,7 +92,11 @@ export default function VerifyPage() {
   }
 
   async function handleDownload() {
-    if (!certRef.current || state.kind !== 'result') return;
+    if (state.kind !== 'result') return;
+    if (!certRef.current) {
+      setActionError('Certificate preview is not ready. Please wait a moment and try again.');
+      return;
+    }
     setBusy('download');
     setActionError(null);
     try {
@@ -100,10 +104,11 @@ export default function VerifyPage() {
         certRef.current,
         `Certificate-${(state.data.recipient_name ?? 'recipient').replace(/[^a-zA-Z0-9]+/g, '-')}-${state.data.certificate_id ?? ''}`
       );
-    } catch {
-      setActionError('PDF download failed. Please try again.');
+    } catch (error) {
+      setActionError(`PDF download failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setBusy(null);
     }
-    setBusy(null);
   }
 
   async function handlePrint() {

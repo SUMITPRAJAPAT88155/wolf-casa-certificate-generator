@@ -6,8 +6,10 @@ const PDF_MARGIN = 4; // mm
 const CERTIFICATE_WIDTH = 1122;
 const CERTIFICATE_HEIGHT = 794;
 const PDF_RENDER_SCALE = 4;
+const DOWNLOAD_URL_LIFETIME = 60_000;
 
 function certificateElementFrom(el: HTMLElement): HTMLElement {
+  if (!el.isConnected) throw new Error('Certificate preview is no longer available. Reopen it and try again.');
   const certificate =
     el.id === 'certificate-view' ? el : el.querySelector<HTMLElement>('#certificate-view');
   if (!certificate) throw new Error('Certificate preview is not available for PDF export.');
@@ -26,7 +28,7 @@ async function canvasFromElement(el: HTMLElement, recipientName?: string) {
   const certificate = certificateElementFrom(el);
   await document.fonts.ready;
   await Promise.all(Array.from(certificate.querySelectorAll('img')).map(waitForImage));
-  return html2canvas(certificate, {
+  const canvas = await html2canvas(certificate, {
     scale: PDF_RENDER_SCALE,
     width: CERTIFICATE_WIDTH,
     height: CERTIFICATE_HEIGHT,
@@ -35,9 +37,7 @@ async function canvasFromElement(el: HTMLElement, recipientName?: string) {
     useCORS: true,
     backgroundColor: '#000000',
     logging: false,
-    onclone: (documentClone) => {
-      const clonedCertificate = documentClone.getElementById('certificate-view');
-      if (!clonedCertificate) return;
+    onclone: (_documentClone, clonedCertificate) => {
       const sourceName = recipientName ?? clonedCertificate.dataset.recipientName;
       if (sourceName !== undefined) {
         const recipient = clonedCertificate.querySelector<HTMLElement>('.certificate-recipient');
@@ -56,9 +56,20 @@ async function canvasFromElement(el: HTMLElement, recipientName?: string) {
       clonedCertificate.style.height = `${CERTIFICATE_HEIGHT}px`;
     },
   });
+  if (canvas.width < CERTIFICATE_WIDTH * PDF_RENDER_SCALE || canvas.height < CERTIFICATE_HEIGHT * PDF_RENDER_SCALE) {
+    throw new Error('Certificate image rendering was incomplete. Please try downloading again.');
+  }
+  return canvas;
 }
 
-function canvasToPdfBlob(canvas: HTMLCanvasElement): Blob {
+async function canvasToPdfBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+  const image = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Could not encode the certificate image. Please try again.'));
+    }, 'image/png');
+  });
+  const imageBytes = new Uint8Array(await image.arrayBuffer());
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
@@ -68,7 +79,7 @@ function canvasToPdfBlob(canvas: HTMLCanvasElement): Blob {
   const width = canvas.width * scale;
   const height = canvas.height * scale;
   pdf.addImage(
-    canvas.toDataURL('image/png'),
+    imageBytes,
     'PNG',
     (pageWidth - width) / 2,
     (pageHeight - height) / 2,
@@ -77,7 +88,9 @@ function canvasToPdfBlob(canvas: HTMLCanvasElement): Blob {
     undefined,
     'SLOW'
   );
-  return pdf.output('blob');
+  const blob = pdf.output('blob');
+  if (blob.size === 0) throw new Error('The certificate PDF is empty. Please try again.');
+  return blob;
 }
 
 async function certificatePdfBlobFromElement(el: HTMLElement, recipientName?: string): Promise<Blob> {
@@ -85,16 +98,37 @@ async function certificatePdfBlobFromElement(el: HTMLElement, recipientName?: st
   return canvasToPdfBlob(canvas);
 }
 
+function safeFileName(fileName: string, extension: 'pdf' | 'zip'): string {
+  const normalized = fileName
+    .trim()
+    .replace(/[<>:"/\\|?*]/g, '-')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/[. ]+$/g, '')
+    .slice(0, 180)
+    .replace(new RegExp(`\\.${extension}$`, 'i'), '');
+  return `${normalized || 'certificate'}.${extension}`;
+}
+
+function triggerBlobDownload(blob: Blob, fileName: string): void {
+  if (blob.size === 0) throw new Error('The generated download file is empty. Please try again.');
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.style.display = 'none';
+  document.body.appendChild(anchor);
+  try {
+    anchor.click();
+  } finally {
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), DOWNLOAD_URL_LIFETIME);
+  }
+}
+
 export async function downloadCertificatePdf(el: HTMLElement, fileName: string, recipientName?: string) {
   const blob = await certificatePdfBlobFromElement(el, recipientName);
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${fileName}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  triggerBlobDownload(blob, safeFileName(fileName, 'pdf'));
 }
 
 export async function certificatePdfBlob(el: HTMLElement): Promise<Blob> {
@@ -113,14 +147,7 @@ export async function downloadCertificatesZip(
     onProgress?.(i + 1, items.length);
   }
   const content = await zip.generateAsync({ type: 'blob' });
-  const url = URL.createObjectURL(content);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${zipName}.zip`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+  triggerBlobDownload(content, safeFileName(zipName, 'zip'));
 }
 
 async function waitForImage(img: HTMLImageElement): Promise<void> {
@@ -135,7 +162,13 @@ async function waitForImage(img: HTMLImageElement): Promise<void> {
   if (img.naturalWidth === 0) {
     throw new Error(`Could not load certificate image: ${img.src}`);
   }
-  await img.decode();
+  try {
+    await img.decode();
+  } catch {
+    if (!img.complete || img.naturalWidth === 0) {
+      throw new Error(`Could not decode certificate image: ${img.src}`);
+    }
+  }
 }
 
 export async function printElement(el: HTMLElement, recipientName?: string): Promise<void> {

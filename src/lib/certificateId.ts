@@ -10,9 +10,10 @@ export function generateCertificateId(): string {
   return `WC-${new Date().getFullYear()}-${suffix}`;
 }
 
-export async function generateUniqueCertificateId(): Promise<string> {
+export async function generateUniqueCertificateId(reservedIds: ReadonlySet<string> = new Set()): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt++) {
     const certificateId = generateCertificateId();
+    if (reservedIds.has(certificateId)) continue;
     const { data, error } = await supabase
       .from('certificates')
       .select('id')

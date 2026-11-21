@@ -14,15 +14,22 @@ const FALLBACK: Omit<AppSettings, 'id' | 'user_id' | 'updated_at'> = {
 export function useSettings() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     const { data, error } = await supabase
       .from('app_settings')
       .select('*')
       .limit(1)
       .maybeSingle();
-    if (!error) setSettings(data);
+    if (error) {
+      setSettings(null);
+      setLoadError(error.message);
+    } else {
+      setSettings(data);
+    }
     setLoading(false);
   }, []);
 
@@ -52,5 +59,5 @@ export function useSettings() {
     return null;
   }
 
-  return { settings: settings ?? null, fallback: FALLBACK, loading, save, reload: load };
+  return { settings: settings ?? null, fallback: FALLBACK, loading, loadError, save, reload: load };
 }

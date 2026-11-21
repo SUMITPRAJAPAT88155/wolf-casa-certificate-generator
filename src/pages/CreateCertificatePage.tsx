@@ -47,8 +47,18 @@ export default function CreateCertificatePage() {
   }
 
   async function saveCertificate(id: string): Promise<Certificate | null> {
+    const normalizedId = id.trim();
+    if (!normalizedId) {
+      setMessage({ type: 'error', text: 'A Certificate ID could not be generated. Please try again.' });
+      return null;
+    }
+    const verificationUrl = buildVerificationUrl(normalizedId);
+    if (!verificationUrl) {
+      setMessage({ type: 'error', text: 'A verification URL could not be created. Please try again.' });
+      return null;
+    }
     const payload = {
-      certificate_id: id,
+      certificate_id: normalizedId,
       recipient_name: recipientName.trim(),
       course_name: courseName.trim(),
       organization_name: organizationName.trim() || 'Wolf Casa',
@@ -56,8 +66,8 @@ export default function CreateCertificatePage() {
       completion_date: completionDate || null,
       issue_date: issueDate || null,
       director_name: directorName.trim() || null,
-      barcode_value: id,
-      verification_url: buildVerificationUrl(id),
+      barcode_value: normalizedId,
+      verification_url: verificationUrl,
     };
     const { data, error } = await supabase.from('certificates').insert(payload).select().single();
     if (error) {
@@ -76,11 +86,11 @@ export default function CreateCertificatePage() {
     setMessage(null);
     try {
       const id = await generateUniqueCertificateId();
-      setCertificateId(id);
       setShowPreview(true);
       const saved = await saveCertificate(id);
       if (saved) {
-        setMessage({ type: 'success', text: `Certificate saved with ID ${id}. You can now download or print it.` });
+        setCertificateId(saved.certificate_id);
+        setMessage({ type: 'success', text: `Certificate saved with ID ${saved.certificate_id}. You can now download or print it.` });
       }
     } catch (error) {
       setMessage({

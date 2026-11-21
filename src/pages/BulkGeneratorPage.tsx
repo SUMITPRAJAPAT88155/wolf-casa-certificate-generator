@@ -3,7 +3,7 @@ import { Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle, FileDown, 
 import * as XLSX from 'xlsx';
 import { supabase } from '@/lib/supabase';
 import type { BulkRow } from '@/lib/types';
-import { generateCertificateId } from '@/lib/certificateId';
+import { generateUniqueCertificateId } from '@/lib/certificateId';
 import { buildVerificationUrl } from '@/lib/verification';
 import { excelDateToISO, todayISO } from '@/lib/date';
 import { downloadCertificatesZip } from '@/lib/pdf';
@@ -33,7 +33,7 @@ export default function BulkGeneratorPage() {
   function handleFile(file: File) {
     setMessage(null);
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: 'array' });
@@ -55,7 +55,7 @@ export default function BulkGeneratorPage() {
             const issue = excelDateToISO(pick('issue date', 'issuedate'));
             return {
               name,
-              certificateId: generateCertificateId(),
+              certificateId: '',
               courseName: course,
               startDate: start,
               completionDate: completion,
@@ -73,11 +73,21 @@ export default function BulkGeneratorPage() {
           setMessage({ type: 'error', text: 'No rows found. Make sure the first sheet has columns: Name, Course Name, Start Date, Completion Date, Issue Date.' });
           return;
         }
+        const reservedIds = new Set<string>();
+        for (const row of parsed) {
+          row.certificateId = await generateUniqueCertificateId(reservedIds);
+          reservedIds.add(row.certificateId);
+        }
         setRows(parsed);
         setFileName(file.name.replace(/\.[^.]+$/, ''));
         setPreviewIndex(0);
-      } catch {
-        setMessage({ type: 'error', text: 'Could not read that file. Please upload a valid .xlsx or .csv file.' });
+      } catch (error) {
+        setMessage({
+          type: 'error',
+          text: error instanceof Error
+            ? `Could not prepare certificates: ${error.message}`
+            : 'Could not read that file. Please upload a valid .xlsx or .csv file.',
+        });
       }
     };
     reader.readAsArrayBuffer(file);
@@ -385,5 +395,4 @@ export default function BulkGeneratorPage() {
     </div>
   );
 }
-
 

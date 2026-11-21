@@ -16,7 +16,7 @@ async function fileToDataUrl(file: File): Promise<string> {
 }
 
 export default function SettingsPage() {
-  const { settings, fallback, loading, save } = useSettings();
+  const { settings, loading, loadError, save } = useSettings();
   const [companyName, setCompanyName] = useState('Wolf Casa');
   const [directorName, setDirectorName] = useState('');
   const [courseName, setCourseName] = useState('');
@@ -90,6 +90,12 @@ export default function SettingsPage() {
       <p className="text-neutral-500 text-sm mt-1 mb-8">
         These details are used as defaults on new certificates.
       </p>
+
+      {loadError && (
+        <p className="text-sm text-red-400 bg-red-950/40 border border-red-900/50 rounded-lg px-4 py-3 mb-5" role="alert">
+          Could not load settings from the app_settings table: {loadError}. Confirm the Supabase migrations have been applied and try again.
+        </p>
+      )}
 
       <div className="space-y-5">
         <section className="bg-neutral-900 border border-neutral-800 rounded-xl p-6">

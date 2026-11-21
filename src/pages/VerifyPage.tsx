@@ -47,18 +47,28 @@ export default function VerifyPage() {
   useEffect(() => {
     let cancelled = false;
     async function verify() {
-      setState({ kind: 'loading' });
-      const { data, error } = await supabase.rpc('verify_certificate', {
-        p_certificate_id: certificateId ?? '',
-      });
-      if (cancelled) return;
-      if (error) {
-        setState({ kind: 'error' });
+      const normalizedId = certificateId?.trim();
+      if (!normalizedId) {
+        setState({ kind: 'notfound' });
         return;
       }
-      const rows = (data ?? []) as VerifyResult[];
-      if (rows.length === 0 || !rows[0].found) setState({ kind: 'notfound' });
-      else setState({ kind: 'result', data: rows[0] });
+      setState({ kind: 'loading' });
+      try {
+        const { data, error } = await supabase.rpc('verify_certificate', {
+          p_certificate_id: normalizedId,
+        });
+        if (cancelled) return;
+        if (error) {
+          setState({ kind: 'error' });
+          return;
+        }
+        const rows = (data ?? []) as VerifyResult[];
+        if (rows.length === 0 || !rows[0].found) setState({ kind: 'notfound' });
+        else setState({ kind: 'result', data: rows[0] });
+      } catch {
+        if (cancelled) return;
+        setState({ kind: 'error' });
+      }
     }
     verify();
     return () => {

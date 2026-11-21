@@ -16,8 +16,9 @@ export function verificationBaseUrl(): string {
   return `${parsedUrl.origin}${parsedUrl.pathname.replace(/\/+$/, '')}/verify`;
 }
 
-export function buildVerificationUrl(certificateId: string): string {
+export function buildVerificationUrl(certificateId: string | null | undefined): string | null {
+  if (typeof certificateId !== 'string') return null;
   const normalizedId = certificateId.trim();
-  if (!normalizedId) throw new Error('A certificate ID is required to build its verification URL.');
+  if (!normalizedId) return null;
   return `${verificationBaseUrl()}/${encodeURIComponent(normalizedId)}`;
 }

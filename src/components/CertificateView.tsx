@@ -66,6 +66,7 @@ export function CertificateView({ data }: CertificateViewProps) {
   const recipientName = data.recipientName.trim();
   const recipient = recipientName.toLocaleUpperCase();
   const course = formatCourseName(data.courseName || 'Course Name');
+  const verificationUrl = buildVerificationUrl(data.certificateId);
 
   useLayoutEffect(() => {
     const frame = frameRef.current;
@@ -165,12 +166,11 @@ export function CertificateView({ data }: CertificateViewProps) {
             </div>
             <div className="certificate-qr">
               <div className="certificate-qr-frame">
-                <QRCodeCanvas
-                  value={data.certificateId ? buildVerificationUrl(data.certificateId) : ''}
-                  size={96}
-                  level="H"
-                  includeMargin
-                />
+                {verificationUrl ? (
+                  <QRCodeCanvas value={verificationUrl} size={96} level="H" includeMargin />
+                ) : (
+                  <span className="text-[9px] text-neutral-500 text-center">Available after generation</span>
+                )}
               </div>
             </div>
           </div>
